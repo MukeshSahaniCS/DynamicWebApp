@@ -3,10 +3,13 @@ const express = require("express");
 const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const cookieparser = require("cookie-parser");
 const app = express();
 const hbs = require("hbs");
 require("../src/db/conn");
 const Register = require("./models/registers");
+const { ChildProcess } = require("child_process");
+const auth = require("./middleware/auth");
 
 const port = process.envPORT || 8000;
 
@@ -15,6 +18,7 @@ const templatesPath = path.join(__dirname, "../templates/views");
 const partialsPath = path.join(__dirname, "../templates/partials");
 const headerPath = path.join(__dirname, "../templates/partials/header");
 app.use(express.json());
+app.use(cookieparser());
 app.use(express.urlencoded({ extended: false }));
 
 // console.log(path.join(__dirname, "../public"));
@@ -38,13 +42,26 @@ app.get("/home/*", (req, res) => {
     errorcomment: "Opps this home page couldn't be found",
   });
 });
-app.get("/about", (req, res) => {
+app.get("/about", auth, (req, res) => {
+  // console.log(`This is a cookies awesome ${req.cookies.jwt}`);
   res.render("about");
 });
-app.get("/about/*", (req, res) => {
-  res.render("error404", {
-    errorcomment: "Opps this about us page couldn't be found",
-  });
+app.get("/logout", auth, async (req, res) => {
+  try {
+    //latest devices account logout
+    // req.user.tokens = req.user.tokens.filter((currElem) => {
+    //   return currElem.token !== req.token;
+    // });
+
+    //logout all devices
+    req.user.tokens = [];
+    res.clearCookie("jwt");
+    console.log("logout successfull");
+    await req.user.save();
+    res.render("login");
+  } catch (error) {
+    res.status(500).send(error);
+  }
 });
 
 app.get("/contact", (req, res) => {
@@ -75,6 +92,12 @@ app.post("*/register", async (req, res) => {
       });
 
       const token = await registerEmployee.generateAuthToken();
+
+      res.cookie("jwt", token, {
+        expires: new Date(Date.now() + 600000),
+        httpOnly: true,
+      });
+      console.log(cookie);
 
       const registered = await registerEmployee.save();
       res.status(201).render("home");
@@ -115,6 +138,12 @@ app.post("/login", async (req, res) => {
     const ismatch = await bcrypt.compare(password, userEmail.password);
 
     const token = await userEmail.generateAuthToken();
+
+    res.cookie("jwt", token, {
+      expires: new Date(Date.now() + 600000),
+      httpOnly: true,
+      // secure: true,
+    });
 
     if (ismatch) {
       res.status(201).render("home");
