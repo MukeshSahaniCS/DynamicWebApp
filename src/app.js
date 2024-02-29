@@ -14,6 +14,20 @@ const auth = require("./middleware/auth");
 const port = process.envPORT || 8000;
 
 const staticPath = path.join(__dirname, "../public");
+
+app.use(
+  "/css",
+  express.static(path.join(__dirname, "../node_modules/bootstrap/dist/css"))
+);
+app.use(
+  "/js",
+  express.static(path.join(__dirname, "../node_modules/bootstrap/dist/js"))
+);
+app.use(
+  "/jq",
+  express.static(path.join(__dirname, "../node_modules/jquery/dist"))
+);
+
 const templatesPath = path.join(__dirname, "../templates/views");
 const partialsPath = path.join(__dirname, "../templates/partials");
 const headerPath = path.join(__dirname, "../templates/partials/header");
@@ -34,14 +48,6 @@ app.get("/", (req, res) => {
   res.render("home");
 });
 
-app.get("/home", (req, res) => {
-  res.render("home");
-});
-app.get("/home/*", (req, res) => {
-  res.render("error404", {
-    errorcomment: "Opps this home page couldn't be found",
-  });
-});
 app.get("/about", auth, (req, res) => {
   // console.log(`This is a cookies awesome ${req.cookies.jwt}`);
   res.render("about");
